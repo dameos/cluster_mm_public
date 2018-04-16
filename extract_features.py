@@ -15,6 +15,13 @@ image_path = sys.argv[1]
 # Load image 
 image = cv2.imread(image_path)
 
+r = 300 / image.shape[1]
+dim = (300, int(image.shape[0] * r))
+ 
+# perform the actual resizing of the image and show it
+image = cv2.resize(image, dim, interpolation = cv2.INTER_AREA)
+
+
 def convert_image_to_LAB(image):
     # Change image color space
     imageLAB = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
@@ -50,16 +57,16 @@ def paint_image(k_means, centers, image):
     cv2.imshow("Image clustered", imageRGB)
     cv2.waitKey(0)
 
-def get_best_k(image_AB, show_chart):
+def get_best_k_calinski(image_AB, show_chart):
     distortions = []
     K = range(2,7)
-    max1 = 0
+    max1 = 10
     k = 0
     for k1 in K:
         k_mean_model = KMeans(n_clusters=k1, random_state=1).fit(image_AB)
         labels = k_mean_model.labels_
-        value = metrics.calinski_harabaz_score(image_AB, labels)
-        if value > max1:
+        value = sum(np.min(cdist(image_AB, k_mean_model.cluster_centers_, 'euclidean'), axis=1)) / image_AB.shape[0]
+        if value < max1:
             max1 = value
             k = k1
         distortions.append(value)
@@ -73,7 +80,8 @@ def get_best_k(image_AB, show_chart):
 
 # Convert image to lab and remove L
 image_AB = convert_image_to_LAB(image)
-k = get_best_k(image_AB, True)
+k = get_best_k_calinski(image_AB, True)
+print(k)
 k_means = KMeans(n_clusters=k, random_state=1).fit(image_AB)
 centers = k_means.cluster_centers_
 paint_image(k_means, centers, image)
